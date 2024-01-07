@@ -73,13 +73,6 @@ def generate_gemini_text_response(text_input):
         st.error(f"Error generating text response: {e}")
         return None
 
-# Display header
-st.set_page_config(
-    page_title="ُEDA AI Chat",
-    page_icon="https://www.edaegypt.gov.eg/media/wc3lsydo/group-287.png",
-    layout="wide",
-)
-
 st.title("EDA AI Chat")
 
 st.markdown('''
