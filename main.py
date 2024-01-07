@@ -6,31 +6,47 @@ import google.generativeai as genai
 # Configure the API key
 genai.configure(api_key="AIzaSyCFPALEVIiwvWSREvVdBOzNd1VeyqQWt9o")
 
-# Set up the model
-generation_config = {
-    "temperature": 0.4,
-    "top_p": 1,
-    "top_k": 32,
-    "max_output_tokens": 4096,
-}
+# Set up the models
+text_generation_model = genai.GenerativeModel(
+    model_name="gemini-pro-text",
+    generation_config={"temperature": 0.4, "top_p": 1, "top_k": 32, "max_output_tokens": 4096},
+)
 
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-]
-
-model = genai.GenerativeModel(
+image_generation_model = genai.GenerativeModel(
     model_name="gemini-pro-vision",
-    generation_config=generation_config,
-    safety_settings=safety_settings,
+    generation_config={"temperature": 0.4, "top_p": 1, "top_k": 32, "max_output_tokens": 4096},
+    safety_settings=[
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    ],
 )
 
 # Define input prompt globally
 input_prompt = """
-               As an expert specializing in assessing the suitability of fruits and foods for individuals with diabetes, your task involves analyzing input images featuring various food items. Your first objective is to identify the type of fruit or food present in the image. Subsequently, you must determine the glycemic index of the identified item. Based on this glycemic index, provide recommendations on whether individuals with diabetes can include the detected food in their diet. If the food is deemed suitable, specify the recommended quantity for consumption. Use English and Arabic languages for the response.
+               As an expert specializing in assessing the suitability of fruits and foods for individuals with diabetes, your task involves analyzing input text or images featuring various food items. Your first objective is to identify the type of fruit or food present. Subsequently, you must determine the glycemic index of the identified item. Based on this glycemic index, provide recommendations on whether individuals with diabetes can include the detected food in their diet. If the food is deemed suitable, specify the recommended quantity for consumption. Use English and Arabic languages for the response.
                """
+
+def generate_gemini_text_response(text_input):
+    prompt_parts = [input_prompt, text_input]
+    try:
+        response = text_generation_model.generate_content(prompt_parts)
+        return response.text
+    except Exception as e:
+        st.error(f"Error generating text response: {e}")
+        return None
+
+def generate_gemini_image_response(image_input):
+    image_prompt = input_image_setup(image_input)
+    if image_prompt:
+        prompt_parts = [input_prompt, image_prompt[0]]
+        try:
+            response = image_generation_model.generate_content(prompt_parts)
+            return response.text
+        except Exception as e:
+            st.error(f"Error generating image response: {e}")
+    return None
 
 def input_image_setup(uploaded_file):
     if not uploaded_file:
@@ -47,23 +63,6 @@ def input_image_setup(uploaded_file):
         st.error(f"Error reading uploaded file: {e}")
         return None
 
-def generate_gemini_response(food_name, food_description, uploaded_file):
-    image_prompt = input_image_setup(uploaded_file)
-    if image_prompt:
-        # Additional input parts for food name and description
-        food_name_part = f"Food Name: {food_name}\n"
-        food_description_part = f"Food Description: {food_description}\n"
-
-        prompt_parts = [input_prompt, food_name_part, food_description_part, image_prompt[0]]
-
-        try:
-            response = model.generate_content(prompt_parts)
-            return response.text
-        except Exception as e:
-            st.error(f"Error generating response: {e}")
-
-    return None
-
 # Display header
 st.set_page_config(
     page_title="ُEDA AI Chat",
@@ -79,17 +78,21 @@ st.markdown('''
 st.markdown('''
 Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E85F6FD-seeklogo.com.png" width="20" height="20"> Streamlit <img src="https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/f/f0d0d26db1f2d99da8472951c60e5a1b782eb6fe.png" width="22" height="22"> Python <img src= "https://i.ibb.co/wwCs096/nn-1-removebg-preview-removebg-preview.png" width="22" height="22">''', unsafe_allow_html=True)
 
-# Additional inputs
-food_name = st.text_input("Enter the name of the food:")
-food_description = st.text_area("Describe the food:")
+# Input section
+input_type = st.radio("Select Input Type:", ["Text Input", "Image Upload"])
 
-# File upload and response display
-uploaded_file = st.file_uploader(label="Upload an image of your food", type=["jpg", "jpeg", "png"])
+if input_type == "Text Input":
+    text_input = st.text_area("Enter text:")
+    if st.button("Generate Response"):
+        response = generate_gemini_text_response(text_input)
+        if response:
+            st.success("Response generated successfully!")
+            st.write(response)
 
-if st.button("Generate Response"):
-    try:
-        response = generate_gemini_response(food_name, food_description, uploaded_file)
-        st.success("Response generated successfully!")
-        st.write(response)
-    except Exception as e:
-        st.error(f"Error processing image: {e}")
+elif input_type == "Image Upload":
+    uploaded_file = st.file_uploader(label="Upload an image of your food", type=["jpg", "jpeg", "png"])
+    if uploaded_file and st.button("Generate Response"):
+        response = generate_gemini_image_response(uploaded_file)
+        if response:
+            st.success("Response generated successfully!")
+            st.write(response)
