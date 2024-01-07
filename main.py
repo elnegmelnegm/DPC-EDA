@@ -39,6 +39,13 @@ input_prompts = {
                """,
 }
 
+# Define a dictionary to map user-friendly health condition names to keys
+health_conditions_map = {
+    "Diabetes داء السكري": "diabetes",
+    "Hypertension ارتفاع ضغط الدم": "hypertension",
+    "Hypercholesterolemia ارتفاع نسبة الكوليسترول": "hypercholesterolemia",
+}
+
 def input_image_setup(uploaded_file):
     if not uploaded_file:
         st.error("No file uploaded.")
@@ -81,7 +88,7 @@ st.markdown('''
 Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E85F6FD-seeklogo.com.png" width="20" height="20"> Streamlit <img src="https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/f/f0d0d26db1f2d99da8472951c60e5a1b782eb6fe.png" width="22" height="22"> Python <img src="https://i.ibb.co/wwCs096/nn-1-removebg-preview-removebg-preview.png" width="22" height="22">''', unsafe_allow_html=True)
 
 # Choose health condition
-health_condition = st.radio("Choose a health condition:", ("Diabetes داء السكري", "Hypertension ارتفاع ضغط الدم", "Hypercholesterolemia  ارتفاع نسبة الكوليسترول"))
+health_condition = st.radio("Choose a health condition:", list(health_conditions_map.keys()))
 
 # Toggle between upload and take photo
 upload_method = st.radio("Choose a method:", ("Upload a Photo", "Take a Photo"))
@@ -92,7 +99,8 @@ if upload_method == "Upload a Photo":
 
     if uploaded_file:
         try:
-            response = generate_gemini_response(uploaded_file, health_condition.lower())
+            condition_key = health_conditions_map[health_condition]
+            response = generate_gemini_response(uploaded_file, condition_key)
             st.text("Uploaded File: " + uploaded_file.name)
             st.text("Generated Response:")
             st.write(response)
@@ -105,7 +113,8 @@ else:
 
     # Process the captured photo
     try:
-        response = generate_gemini_response(picture, health_condition.lower())
+        condition_key = health_conditions_map[health_condition]
+        response = generate_gemini_response(picture, condition_key)
         st.text("Generated Response:")
         st.write(response)
     except Exception as e:
