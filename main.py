@@ -65,9 +65,9 @@ def generate_gemini_image_response(uploaded_file, lang="en"):
     return None
 
 def generate_gemini_text_response(text_input, lang="en"):
-    prompt_parts = [input_prompt, text_input]
+    text_prompt = f"{input_prompt}\n{text_input}"
     try:
-        response = text_generation_model.generate_content(prompt_parts, lang=lang)
+        response = text_generation_model.generate_content([text_prompt])
         return response.text
     except Exception as e:
         st.error(f"Error generating text response: {e}")
