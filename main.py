@@ -83,7 +83,7 @@ Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E
 
 # Input section
 st.subheader("Text Input")
-text_input = st.text_area("Enter text:")
+text_input = st.text_input("Enter text:")
 if st.button("Generate Text Response"):
     text_response = generate_gemini_text_response(text_input)
     if text_response:
