@@ -50,13 +50,13 @@ def input_image_setup(uploaded_file):
         st.error(f"Error reading uploaded file: {e}")
         return None
 
-def generate_gemini_image_response(uploaded_file):
+def generate_gemini_image_response(uploaded_file, lang="en"):
     image_prompt = input_image_setup(uploaded_file)
     if image_prompt:
         prompt_parts = [input_prompt, image_prompt[0]]
         
         try:
-            response = image_generation_model.generate_content(prompt_parts)
+            response = image_generation_model.generate_content(prompt_parts, lang=lang)
             return response.text
         except Exception as e:
             st.error(f"Error generating image response: {e}")
@@ -64,10 +64,10 @@ def generate_gemini_image_response(uploaded_file):
 
     return None
 
-def generate_gemini_text_response(text_input):
+def generate_gemini_text_response(text_input, lang="en"):
     prompt_parts = [input_prompt, text_input]
     try:
-        response = text_generation_model.generate_content(prompt_parts)
+        response = text_generation_model.generate_content(prompt_parts, lang=lang)
         return response.text
     except Exception as e:
         st.error(f"Error generating text response: {e}")
@@ -84,17 +84,19 @@ Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E
 # Input section
 st.subheader("Text Input")
 text_input = st.text_area("Enter text:")
+lang_text = st.selectbox("Select Language for Text Response", ["en", "ar"])
 if st.button("Generate Text Response"):
-    text_response = generate_gemini_text_response(text_input)
+    text_response = generate_gemini_text_response(text_input, lang_text)
     if text_response:
         st.success("Text Response generated successfully!")
         st.write(text_response)
 
 st.subheader("Image Input")
 uploaded_image = st.file_uploader("Upload an image of your food", type=["jpg", "jpeg", "png"])
+lang_image = st.selectbox("Select Language for Image Response", ["en", "ar"])
 if uploaded_image:
     if st.button("Generate Image Response"):
-        image_response = generate_gemini_image_response(uploaded_image)
+        image_response = generate_gemini_image_response(uploaded_image, lang_image)
         if image_response:
             st.success("Image Response generated successfully!")
             st.write(image_response)
