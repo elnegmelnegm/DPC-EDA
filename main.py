@@ -60,6 +60,7 @@ def generate_gemini_image_response(uploaded_file):
             return response.text
         except Exception as e:
             st.error(f"Error generating image response: {e}")
+            return None
 
     return None
 
