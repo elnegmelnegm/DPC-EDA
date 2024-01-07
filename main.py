@@ -34,8 +34,8 @@ input_prompts = {
     "hypertension": """
                As an expert specializing in assessing the suitability of fruits and foods for individuals with high blood pressure (hypertension), your task involves analyzing input images featuring various food items. Your first objective is to identify the type of fruit or food present in the image. Subsequently, provide recommendations on whether individuals with hypertension can include the detected food in their diet. If the food is deemed suitable, specify the recommended quantity for consumption. Use English and Arabic languages for the response.
                """,
-    "cholesterol": """
-               As an expert specializing in assessing the suitability of fruits and foods for individuals with high cholesterol, your task involves analyzing input images featuring various food items. Your first objective is to identify the type of fruit or food present in the image. Subsequently, provide recommendations on whether individuals with high cholesterol can include the detected food in their diet. If the food is deemed suitable, specify the recommended quantity for consumption. Use English and Arabic languages for the response.
+    "hypercholesterolemia": """
+               As an expert specializing in assessing the suitability of fruits and foods for individuals with hypercholesterolemia, your task involves analyzing input images featuring various food items. Your first objective is to identify the type of fruit or food present in the image. Subsequently, provide recommendations on whether individuals with hypercholesterolemia can include the detected food in their diet. If the food is deemed suitable, specify the recommended quantity for consumption. Use English and Arabic languages for the response.
                """,
 }
 
@@ -81,7 +81,7 @@ st.markdown('''
 Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E85F6FD-seeklogo.com.png" width="20" height="20"> Streamlit <img src="https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/f/f0d0d26db1f2d99da8472951c60e5a1b782eb6fe.png" width="22" height="22"> Python <img src="https://i.ibb.co/wwCs096/nn-1-removebg-preview-removebg-preview.png" width="22" height="22">''', unsafe_allow_html=True)
 
 # Choose health condition
-health_condition = st.radio("Choose a health condition:", ("Diabetes", "Hypertension", "Cholesterol"))
+health_condition = st.radio("Choose a health condition:", ("Diabetes", "Hypertension", "Hypercholesterolemia"))
 
 # Toggle between upload and take photo
 upload_method = st.radio("Choose a method:", ("Upload a Photo", "Take a Photo"))
