@@ -81,7 +81,7 @@ st.markdown('''
 Powered by Google AI <img src="https://seeklogo.com/images/G/google-ai-logo-996E85F6FD-seeklogo.com.png" width="20" height="20"> Streamlit <img src="https://global.discourse-cdn.com/business7/uploads/streamlit/original/2X/f/f0d0d26db1f2d99da8472951c60e5a1b782eb6fe.png" width="22" height="22"> Python <img src="https://i.ibb.co/wwCs096/nn-1-removebg-preview-removebg-preview.png" width="22" height="22">''', unsafe_allow_html=True)
 
 # Choose health condition
-health_condition = st.radio("Choose a health condition:", ("Diabetes", "Hypertension", "Hypercholesterolemia"))
+health_condition = st.radio("Choose a health condition:", ("Diabetes داء السكري", "Hypertension ارتفاع ضغط الدم", "Hypercholesterolemia  ارتفاع نسبة الكوليسترول"))
 
 # Toggle between upload and take photo
 upload_method = st.radio("Choose a method:", ("Upload a Photo", "Take a Photo"))
