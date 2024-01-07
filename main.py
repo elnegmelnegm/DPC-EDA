@@ -82,7 +82,7 @@ st.set_page_config(
 )
 
 st.markdown('''
-<img src="https://www.edaegypt.gov.eg/media/wc3lsydo/group-287.png" width="250" height="100">''', unsafe_allow_html=True)
+                                              <img src="https://www.edaegypt.gov.eg/media/wc3lsydo/group-287.png" width="250" height="100">''', unsafe_allow_html=True)
 
  
 st.markdown('''
