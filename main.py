@@ -3,7 +3,7 @@ from PIL import Image
 import google.generativeai as genai
 
 # Configure the API key
-genai.configure(api_key="AIzaSyCFPALEVIiwvWSREvVdBOzNd1VeyqQWt9o")
+genai.configure(api_key="AIzaSyDKn4MFtkcauuqXXQYsrDEZvEO8DmwAFBE")
 
 # Set up the model
 generation_config = {
