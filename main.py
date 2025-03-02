@@ -25,65 +25,86 @@ EDA Nutrition Recommendation App using Google AI <img src="https://seeklogo.com/
 
 # Model Selection
 try:
+    # Get available models
     available_models = genai.list_models()
+    
+    # Define preferred model names - prioritizing newer models first
+    preferred_vision_models = ["gemini-1.5-flash", "gemini-1.5-pro-vision", "gemini-2.0-flash", "gemini-2.0-pro-vision"]
+    
+    # Filter for vision models
     gemini_vision_models = []
-    gemini_text_models = [] # Fallback models if no vision models
-
+    gemini_text_models = []  # Fallback models
+    
     for model in available_models:
         model_name = model.name
+        # Skip deprecated models explicitly
+        if "gemini-1.0" in model_name:
+            continue
+            
         if "gemini" in model_name:
-            if "vision" in model_name and "1.0" not in model_name: # Exclude gemini-1.0-pro-vision explicitly
-                gemini_vision_models.append(model_name)
-            elif not "vision" in model_name and ("gemini-1.5" in model_name or "gemini-2.0" in model_name or "gemini-pro" in model_name): # Add gemini-pro as fallback
-                gemini_text_models.append(model_name)
-
-    st.write("Available Vision Models:", gemini_vision_models) # Debug print
-    st.write("Available Text Models:", gemini_text_models) # Debug print
-
+            # Check if it's a vision-capable model
+            if any(capability == "generateContent" for capability in model.supported_generation_methods):
+                supports_image = False
+                # Check if model supports image inputs
+                for input_type in getattr(model, 'input_token_types', []):
+                    if 'image' in input_type.lower():
+                        supports_image = True
+                        break
+                
+                if supports_image:
+                    gemini_vision_models.append(model_name)
+                else:
+                    gemini_text_models.append(model_name)
+    
+    # If no models were found with detailed check, use a simpler approach
+    if not gemini_vision_models:
+        gemini_vision_models = [model.name for model in available_models 
+                          if "gemini" in model.name.lower() 
+                          and any(pref in model.name for pref in preferred_vision_models)]
+    
+    # Sort models to prioritize preferred ones
+    def get_model_priority(model_name):
+        for i, preferred in enumerate(preferred_vision_models):
+            if preferred in model_name:
+                return i
+        return len(preferred_vision_models)  # Lower priority for non-preferred models
+    
+    gemini_vision_models.sort(key=get_model_priority)
+    
+    # Select default model
+    default_model_index = 0
+    
+    # Debug model lists
+    with st.expander("Debug: Available Models"):
+        st.write("Vision Models:", gemini_vision_models)
+        st.write("Text Models:", gemini_text_models)
+    
     if not gemini_vision_models and not gemini_text_models:
-        st.error("No suitable Gemini models found with your API key/project.")
+        st.error("No suitable Gemini models found with your API key/project. Make sure you have access to Gemini models.")
         st.stop()
-
-    selected_model_name = None # Initialize outside if block
-
+    
+    # Model selection UI
+    st.subheader("Model Selection")
     if gemini_vision_models:
-        default_vision_model_index = 0
-        preferred_vision_models = ["gemini-1.5-flash", "gemini-2.0-flash"] # Preferred models list
-        for i, model in enumerate(gemini_vision_models):
-            if model in preferred_vision_models: # Prioritize preferred models
-                default_vision_model_index = i
-                break
-
-        st.subheader("Model Selection")
-        selected_model_name_vision = st.selectbox( # Separate selectbox for vision models
-            "Select a Vision Model to use:",
+        selected_model_name = st.selectbox(
+            "Select a Vision Model:",
             gemini_vision_models,
-            index=default_vision_model_index,
+            index=default_model_index,
         )
-        selected_model_name = selected_model_name_vision # Assign selected vision model
-
         st.success(f"Using Vision model: {selected_model_name}")
-
-    elif gemini_text_models: # Only show text model selector if no vision models
-        st.subheader("Model Selection (Text Only)")
-        selected_model_name_text = st.selectbox(
-            "Select a Text Model to use (No Image Analysis):",
+    else:
+        selected_model_name = st.selectbox(
+            "Select a Text Model (No Image Analysis):",
             gemini_text_models,
             index=0
         )
-        selected_model_name = selected_model_name_text # Assign selected text model
-        st.warning("No vision models available. Image analysis will be limited. Using text model.")
-        st.success(f"Using Text model: {selected_model_name} (Text Only)")
-
-
-    st.write("Selected Model Name:", selected_model_name) # Debug print
-
+        st.warning("No vision models available. Image analysis will be limited. Using text model only.")
+        st.success(f"Using Text model: {selected_model_name}")
 
 except Exception as e:
     st.error(f"Error listing models: {e}")
     st.error("Please check your API key and Google Cloud project configuration.")
     st.stop()
-
 
 # Define input prompts for different health conditions
 input_prompts = {
@@ -113,7 +134,7 @@ def input_image_setup(uploaded_file):
     try:
         # Read the content of the uploaded file as bytes
         image_parts = [
-            {"mime_type": "image/jpeg", "data": uploaded_file.read()}
+            {"mime_type": uploaded_file.type, "data": uploaded_file.read()}
         ]
         return image_parts
     except Exception as e:
@@ -128,34 +149,48 @@ def generate_gemini_response(selected_model_name, uploaded_file, condition):
         try:
             # Initialize the model with the selected name
             model = genai.GenerativeModel(selected_model_name)
+            
+            # Generation config
+            generation_config = {
+                "temperature": 0.4,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 2048,
+            }
 
-            # Check if the model supports safety settings and apply if needed
-            safety_settings = None
+            # Try with safety settings first
             try:
-                safety_settings = [
-                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+                safety_settings = {
+                    "HARASSMENT": "BLOCK_MEDIUM_AND_ABOVE",
+                    "HATE_SPEECH": "BLOCK_MEDIUM_AND_ABOVE",
+                    "SEXUALLY_EXPLICIT": "BLOCK_MEDIUM_AND_ABOVE",
+                    "DANGEROUS_CONTENT": "BLOCK_MEDIUM_AND_ABOVE",
                 }
+                
                 response = model.generate_content(
                     prompt_parts,
-                    safety_settings=safety_settings
+                    safety_settings=safety_settings,
+                    generation_config=generation_config
                 )
-            except:
-                response = model.generate_content(prompt_parts) # Try without safety settings if error
+            except Exception as safety_error:
+                st.warning(f"Trying without safety settings due to: {str(safety_error)}")
+                # Fallback without safety settings
+                response = model.generate_content(
+                    prompt_parts,
+                    generation_config=generation_config
+                )
 
             return response.text
         except Exception as e:
             st.error(f"Error generating response with {selected_model_name}: {e}")
             st.error(f"Detailed error: {str(e)}")
             if "404" in str(e) and "not found" in str(e):
-                st.error(f"The model '{selected_model_name}' might not support the generateContent method or is not found.")
+                st.error(f"The model '{selected_model_name}' might not be available. Try selecting a different model.")
             elif "403" in str(e):
                 st.error("Permission denied. Your API key may not have access to this model.")
             return None
 
-    return None # Return None if image_prompt is None
+    return None
 
 # Choose health condition
 health_condition = st.radio("Choose a health condition:", list(health_conditions_map.keys()))
@@ -169,6 +204,13 @@ if upload_method == "Upload a Photo":
 
     if uploaded_file:
         try:
+            # Display the image
+            img = Image.open(uploaded_file)
+            st.image(img, caption="Uploaded Image", use_column_width=True)
+            
+            # Reset the file position after opening
+            uploaded_file.seek(0)
+            
             condition_key = health_conditions_map[health_condition]
             with st.spinner(f"Generating response using {selected_model_name}..."):
                 response = generate_gemini_response(selected_model_name, uploaded_file, condition_key)
@@ -185,14 +227,12 @@ else:
     # Take a photo using the camera input
     picture = st.camera_input("Take a picture")
 
-    if picture: # Only process if picture is taken
-        st.image(picture, caption="Captured Photo", use_column_width=True)
-
+    if picture:
         # Process the captured photo
         try:
             condition_key = health_conditions_map[health_condition]
             with st.spinner(f"Generating response using {selected_model_name}..."):
-                response = generate_gemini_response(selected_model_name, picture, condition_key) # Pass picture as uploaded_file
+                response = generate_gemini_response(selected_model_name, picture, condition_key)
             if response:
                 st.subheader("Generated Response:")
                 st.write(response)
