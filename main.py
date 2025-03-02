@@ -32,44 +32,51 @@ try:
     for model in available_models:
         model_name = model.name
         if "gemini" in model_name:
-            if "vision" in model_name:
+            if "vision" in model_name and "1.0" not in model_name: # Exclude gemini-1.0-pro-vision explicitly
                 gemini_vision_models.append(model_name)
             elif not "vision" in model_name and ("gemini-1.5" in model_name or "gemini-2.0" in model_name or "gemini-pro" in model_name): # Add gemini-pro as fallback
                 gemini_text_models.append(model_name)
+
+    st.write("Available Vision Models:", gemini_vision_models) # Debug print
+    st.write("Available Text Models:", gemini_text_models) # Debug print
 
     if not gemini_vision_models and not gemini_text_models:
         st.error("No suitable Gemini models found with your API key/project.")
         st.stop()
 
+    selected_model_name = None # Initialize outside if block
+
     if gemini_vision_models:
         default_vision_model_index = 0
+        preferred_vision_models = ["gemini-1.5-flash", "gemini-2.0-flash"] # Preferred models list
         for i, model in enumerate(gemini_vision_models):
-            if "gemini-1.5-flash" in model or "gemini-2.0-flash" in model: #Prioritize flash models
+            if model in preferred_vision_models: # Prioritize preferred models
                 default_vision_model_index = i
                 break
 
         st.subheader("Model Selection")
-        selected_model_name = st.selectbox(
-            "Select a model to use:",
-            gemini_vision_models + gemini_text_models, # Combine vision and text models
-            index=default_vision_model_index if gemini_vision_models else 0, # Default to vision or first text
-            format_func=lambda name: f"{name} (Vision Support)" if name in gemini_vision_models else f"{name} (Text Only)"
+        selected_model_name_vision = st.selectbox( # Separate selectbox for vision models
+            "Select a Vision Model to use:",
+            gemini_vision_models,
+            index=default_vision_model_index,
         )
+        selected_model_name = selected_model_name_vision # Assign selected vision model
 
-        if "gemini-pro-vision" in selected_model_name:
-            st.warning("You have selected Gemini Pro Vision. Please note that `gemini-pro-vision` has been deprecated on July 12, 2024. Consider switching to a different model, for example `gemini-1.5-flash` or another model from the dropdown.")
+        st.success(f"Using Vision model: {selected_model_name}")
 
-        st.success(f"Using model: {selected_model_name}")
-
-    else:
-        st.subheader("Model Selection")
-        selected_model_name = st.selectbox(
-            "Select a model to use:",
+    elif gemini_text_models: # Only show text model selector if no vision models
+        st.subheader("Model Selection (Text Only)")
+        selected_model_name_text = st.selectbox(
+            "Select a Text Model to use (No Image Analysis):",
             gemini_text_models,
             index=0
         )
-        st.warning("No vision models available. Image analysis will be limited if you select a text-only model.")
-        st.success(f"Using model: {selected_model_name} (Text Only)")
+        selected_model_name = selected_model_name_text # Assign selected text model
+        st.warning("No vision models available. Image analysis will be limited. Using text model.")
+        st.success(f"Using Text model: {selected_model_name} (Text Only)")
+
+
+    st.write("Selected Model Name:", selected_model_name) # Debug print
 
 
 except Exception as e:
@@ -125,7 +132,7 @@ def generate_gemini_response(selected_model_name, uploaded_file, condition):
             # Check if the model supports safety settings and apply if needed
             safety_settings = None
             try:
-                safety_settings = {
+                safety_settings = [
                     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
                     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
                     {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
